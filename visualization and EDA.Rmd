@@ -4,18 +4,175 @@ output: github_document
 ---
 
 I'm an R Markdown document! 
-
-# Section 1
-
-Here's a **code chunk** that samples from 
-a _normal distribution_:
-
 ```{r}
-samp = rnorm(100)
-length(samp)
+library(tidyverse)
+library(ggridges)
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp =.6,
+  out.width = "90%"
+)
 ```
 
-# Section 2
 
-I can take the mean of the sample, too!
-The mean is `r mean(samp)`.
+# 10/5 Visualization 1
+
+load in a dataset that we will use often
+```{r}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728", "USC00519397", "USS0023B17S"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(
+      id, 
+      USW00094728 = "CentralPark_NY", 
+      USC00519397 = "Waikiki_HA",
+      USS0023B17S = "Waterhole_WA"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+```
+## Scatterplot
+tmax vs tmin
+```{r}
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax)) +
+  geom_point()
+```
+
+you can save ggplot
+```{r}
+ggp_tmax_tin <- 
+  weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax)) +
+  geom_point()
+
+ggp_tmax_tin
+##ggsave()
+```
+
+## let's fancy it up
+
+add color? lines? other stuff?
+```{r}
+## what in ggplot apply to everything
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax,color = name )) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(se = FALSE)
+
+## when aes in geom_point, it will only work for point
+
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax )) +
+  ## we can use null to make it not apply
+  ## geom_point(aes(color = NULL) ,alpha = 0.3)
+  geom_point(aes(color = name) ,alpha = 0.3) +
+  geom_smooth(se = FALSE)
+
+## when aes in geom_point, it will only work for point
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name )) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(se = FALSE) +
+  facet_grid(.~name)
+```
+let's make one more scatterplot
+```{r}
+weather_df %>% 
+  ggplot(aes(x = date, y = tmax ,size = prcp)) +
+  geom_point(alpha = .3) +
+  facet_grid(.~name) +
+  geom_smooth(se = FALSE)
+```
+
+## use data manipulation as part of this
+
+```{r}
+weather_df %>% 
+  filter(name == "CentralPark_NY") %>% 
+  mutate(
+    tmax = tmax * (9 / 5) + 32,
+    tmin = tmin * (9 / 5) + 32
+  ) %>% 
+  ggplot(aes(x = tmin, y = tmax)) +
+  geom_point()
+```
+
+which geoms do you want
+```{r}
+weather_df %>% 
+  ggplot(aes(x = date, y = tmax, color = name))+
+  geom_smooth()
+
+##hexbin and geom_hex which can be used for a alot of data
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax))+
+  geom_hex()
+
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax))+
+  geom_bin_2d()
+```
+
+## UNIvariate plots
+
+```{r}
+## fill = name to show the resource
+weather_df %>% 
+  ggplot(aes( x = tmax, fill = name)) +
+  geom_histogram() +
+  facet_grid(.~name)
+
+```
+
+Let's try some other plots...
+
+```{r}
+weather_df %>% 
+  ggplot(aes(x = tmax, fill = name))+
+  geom_density(alpha = .3)
+```
+
+still with tmax and tmin
+```{r}
+weather_df %>% 
+  ggplot(aes(x = name , y = tmax)) +
+  geom_boxplot()
+```
+
+some people like violin pilot
+```{r}
+weather_df %>% 
+  ggplot(aes(x = name , y = tmax , color =name)) +
+  geom_violin()
+```
+
+What about rigdes...
+```{r}
+weather_df %>% 
+  ggplot(aes(x = tmax, y = name))+
+  geom_density_ridges(alpha =.8, scale = .8)
+```
+
+## Embedding plots
+
+```{r}
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = 0.3)
+```
+
+```{r, fig.width = 12,  fig.height = 5}
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = 0.3)
+```
+
+
+
+
+
