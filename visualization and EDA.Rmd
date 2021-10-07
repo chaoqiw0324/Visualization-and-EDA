@@ -6,6 +6,7 @@ output: github_document
 I'm an R Markdown document! 
 ```{r}
 library(tidyverse)
+library(viridis)
 library(ggridges)
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -35,6 +36,7 @@ weather_df =
     tmax = tmax / 10) %>%
   select(name, id, everything())
 ```
+
 ## Scatterplot
 tmax vs tmin
 ```{r}
@@ -171,6 +173,64 @@ weather_df %>%
   ggplot(aes(x = tmin, y = tmax, color = name)) +
   geom_point(alpha = 0.3)
 ```
+
+# 10/7
+## start with a familiar one
+
+```{r}
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name))+
+  geom_point(alpha = .3)+
+  labs(
+    title = "Temperature at three stations",
+    x = "Minimum daily temperature(c)",
+    y = "Maximum daily temperature(c)",
+    caption = "Data from the rnoaa package with three stations"
+  )
+```
+
+## Scales
+
+```{r}
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = .3) +
+  labs(
+    title = "Temperature at three stations",
+    x = "Minimum daily temperature(c)",
+    y = "Maximum daily temperature(c)",
+    caption = "Data from the rnoaa package"
+  )+
+  scale_x_continuous(
+    breaks = c(-15,0,15),
+    labels = c("-15","0","15")
+  ) +
+  ##scale_y_continuous(
+    ##breaks = c(10,20,30),
+    ##labels = c("10","20","30")
+  #)
+  scale_y_continuous(
+    trans = "sqrt",
+    position = "right"
+  )
+```
+
+```{r}
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = .3) +
+  labs(
+    title = "Temperature at three stations",
+    x = "Minimum daily temperature(c)",
+    y = "Maximum daily temperature(c)",
+    caption = "Data from the rnoaa package"
+  ) +
+  scale_color_hue(
+    name = "Location", 
+    h = c(100, 300))+
+  scale_color_viridis_d()
+```
+
 
 
 
