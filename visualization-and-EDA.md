@@ -19,6 +19,13 @@ library(tidyverse)
     ## x dplyr::lag()    masks stats::lag()
 
 ``` r
+library(viridis)
+```
+
+    ## 载入需要的程辑包：viridisLite
+
+``` r
+library(patchwork)
 library(ggridges)
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -314,3 +321,259 @@ weather_df %>%
     ## Warning: Removed 15 rows containing missing values (geom_point).
 
 <img src="visualization-and-EDA_files/figure-gfm/unnamed-chunk-15-1.png" width="90%" />
+
+# 10/7
+
+## start with a familiar one
+
+``` r
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name))+
+  geom_point(alpha = .3)+
+  labs(
+    title = "Temperature at three stations",
+    x = "Minimum daily temperature(c)",
+    y = "Maximum daily temperature(c)",
+    caption = "Data from the rnoaa package with three stations"
+  )
+```
+
+    ## Warning: Removed 15 rows containing missing values (geom_point).
+
+<img src="visualization-and-EDA_files/figure-gfm/unnamed-chunk-16-1.png" width="90%" />
+
+## Scales
+
+``` r
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = .3) +
+  labs(
+    title = "Temperature at three stations",
+    x = "Minimum daily temperature(c)",
+    y = "Maximum daily temperature(c)",
+    caption = "Data from the rnoaa package"
+  )+
+  scale_x_continuous(
+    breaks = c(-15,0,15),
+    labels = c("-15","0","15")
+  ) +
+  ##scale_y_continuous(
+    ##breaks = c(10,20,30),
+    ##labels = c("10","20","30")
+  #)
+  scale_y_continuous(
+    trans = "sqrt",
+    position = "right"
+  )
+```
+
+    ## Warning in self$trans$transform(x): 产生了NaNs
+
+    ## Warning: Transformation introduced infinite values in continuous y-axis
+
+    ## Warning: Removed 90 rows containing missing values (geom_point).
+
+<img src="visualization-and-EDA_files/figure-gfm/unnamed-chunk-17-1.png" width="90%" />
+
+``` r
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = .3) +
+  labs(
+    title = "Temperature at three stations",
+    x = "Minimum daily temperature(c)",
+    y = "Maximum daily temperature(c)",
+    caption = "Data from the rnoaa package"
+  ) +
+  scale_color_hue(
+    name = "Location", 
+    h = c(100, 300))+
+  scale_color_viridis_d()
+```
+
+    ## Scale for 'colour' is already present. Adding another scale for 'colour',
+    ## which will replace the existing scale.
+
+    ## Warning: Removed 15 rows containing missing values (geom_point).
+
+<img src="visualization-and-EDA_files/figure-gfm/unnamed-chunk-18-1.png" width="90%" />
+
+## Themes
+
+``` r
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = .3) +
+  labs(
+    title = "Temperature at three stations",
+    x = "Minimum daily temperature(c)",
+    y = "Maximum daily temperature(c)",
+    caption = "Data from the rnoaa package with three stations"
+  ) +
+  scale_color_viridis_d() +
+  # change the position
+  # it is important to make sure the postion of theme command
+  #theme_bw() + 
+  #theme_classic() +
+  theme(legend.position = "bottom")
+```
+
+    ## Warning: Removed 15 rows containing missing values (geom_point).
+
+<img src="visualization-and-EDA_files/figure-gfm/unnamed-chunk-19-1.png" width="90%" />
+
+## Setting for the whole file
+
+``` r
+library(tidyverse)
+
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+## `data` in geoms
+
+``` r
+central_park <- 
+  weather_df %>% 
+  filter(name == "CentralPark_NY")
+
+waikiki = 
+  weather_df %>% 
+  filter(name == "Waikiki_HA")
+
+#point from waikiki and line from centralpark
+waikiki %>% 
+  ggplot(aes(x = date, y = tmax, color = name)) +
+  geom_point() +
+  geom_line(data = central_park)
+```
+
+    ## Warning: Removed 3 rows containing missing values (geom_point).
+
+<img src="visualization-and-EDA_files/figure-gfm/unnamed-chunk-21-1.png" width="90%" />
+
+## `patchwork`
+
+``` r
+ggp_tmax_tin <- 
+  weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name))+
+  geom_point(alpha = .3)+
+  geom_smooth()
+
+
+ggp_prcp_dens <-
+  weather_df %>% 
+  filter(prcp > 0) %>% 
+  ggplot(aes(x = prcp, fill = name)) + 
+  geom_density(alpha = .3)
+
+tmax_date_p <- 
+  weather_df %>% 
+  ggplot(aes(x = date, y = tmax, color = name)) + 
+  geom_point(alpha = .5) +
+  geom_smooth(se = FALSE) + 
+  theme(legend.position = "bottom")
+
+## + for the same row ,and / for new row
+ggp_tmax_tin / (ggp_prcp_dens + tmax_date_p)
+```
+
+    ## `geom_smooth()` using method = 'loess' and formula 'y ~ x'
+
+    ## Warning: Removed 15 rows containing non-finite values (stat_smooth).
+
+    ## Warning: Removed 15 rows containing missing values (geom_point).
+
+    ## `geom_smooth()` using method = 'loess' and formula 'y ~ x'
+
+    ## Warning: Removed 3 rows containing non-finite values (stat_smooth).
+
+    ## Warning: Removed 3 rows containing missing values (geom_point).
+
+<img src="visualization-and-EDA_files/figure-gfm/unnamed-chunk-22-1.png" width="90%" />
+
+## data manipulation
+
+quick example on factors
+
+``` r
+weather_df %>% 
+  mutate(name = fct_reorder(name, tmax)
+  ) %>% 
+  ggplot(aes(x = name, y = tmax))+
+  geom_boxplot()
+```
+
+    ## Warning: Removed 3 rows containing non-finite values (stat_boxplot).
+
+<img src="visualization-and-EDA_files/figure-gfm/unnamed-chunk-23-1.png" width="90%" />
+
+What about tmax and tmin 。…
+
+``` r
+weather_df %>% 
+  pivot_longer(
+    tmax:tmin,
+    names_to = "obs",
+    values_to = "temperature"
+  ) %>% 
+  ggplot(aes(x = temperature, fill =obs))+
+  geom_density(alpha = .3)+
+  facet_grid(.~name)
+```
+
+    ## Warning: Removed 18 rows containing non-finite values (stat_density).
+
+<img src="visualization-and-EDA_files/figure-gfm/unnamed-chunk-24-1.png" width="90%" />
+
+``` r
+pulse_df <- 
+  haven::read_sas("data/public_pulse_data.sas7bdat") %>% 
+  janitor::clean_names() %>% 
+  pivot_longer(
+    bdi_score_bl:bdi_score_12m,
+    names_to = "visit",
+    values_to = "bdi",
+    names_prefix = "bdi_score_"
+  ) %>% 
+  mutate(
+    visit = recode(visit, "bl" = "00m")
+    )
+
+pulse_df %>% 
+  ggplot(aes(x = visit, y = bdi)) +
+  geom_boxplot()
+```
+
+    ## Warning: Removed 879 rows containing non-finite values (stat_boxplot).
+
+<img src="visualization-and-EDA_files/figure-gfm/unnamed-chunk-25-1.png" width="90%" />
+
+``` r
+pulse_df %>% 
+  ggplot(aes(x = visit, y = bdi)) +
+  geom_point(size = .2) +
+  geom_line(aes(group = id),alpha = .3)
+```
+
+    ## Warning: Removed 879 rows containing missing values (geom_point).
+
+    ## Warning: Removed 515 row(s) containing missing values (geom_path).
+
+<img src="visualization-and-EDA_files/figure-gfm/unnamed-chunk-25-2.png" width="90%" />

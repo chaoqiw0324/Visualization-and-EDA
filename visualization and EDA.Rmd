@@ -6,7 +6,9 @@ output: github_document
 I'm an R Markdown document! 
 ```{r}
 library(tidyverse)
+#package viridis
 library(viridis)
+library(patchwork)
 library(ggridges)
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -227,10 +229,278 @@ weather_df %>%
   ) +
   scale_color_hue(
     name = "Location", 
-    h = c(100, 300))+
+    h = c(100, 300)) +
+  #options can be other
   scale_color_viridis_d()
 ```
 
+## Themes
+```{r}
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = .3) +
+  labs(
+    title = "Temperature at three stations",
+    x = "Minimum daily temperature(c)",
+    y = "Maximum daily temperature(c)",
+    caption = "Data from the rnoaa package with three stations"
+  ) +
+  scale_color_viridis_d() +
+  # change the position
+  # it is important to make sure the postion of theme command
+  #theme_bw() + 
+  #theme_classic() +
+  theme(legend.position = "bottom")
+```
+
+## Setting for the whole file
+```{r eval = FALSE}
+library(tidyverse)
+
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+## `data` in geoms
+```{r}
+central_park <- 
+  weather_df %>% 
+  filter(name == "CentralPark_NY")
+
+waikiki = 
+  weather_df %>% 
+  filter(name == "Waikiki_HA")
+
+#point from waikiki and line from centralpark
+waikiki %>% 
+  ggplot(aes(x = date, y = tmax, color = name)) +
+  geom_point() +
+  geom_line(data = central_park)
+  
+```
+
+## `patchwork`
+```{r}
+ggp_tmax_tin <- 
+  weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name))+
+  geom_point(alpha = .3)+
+  geom_smooth()
+
+
+ggp_prcp_dens <-
+  weather_df %>% 
+  filter(prcp > 0) %>% 
+  ggplot(aes(x = prcp, fill = name)) + 
+  geom_density(alpha = .3)
+
+tmax_date_p <- 
+  weather_df %>% 
+  ggplot(aes(x = date, y = tmax, color = name)) + 
+  geom_point(alpha = .5) +
+  geom_smooth(se = FALSE) + 
+  theme(legend.position = "bottom")
+
+## + for the same row ,and / for new row
+ggp_tmax_tin / (ggp_prcp_dens + tmax_date_p)
+```
+
+## data manipulation
+quick example on factors
+```{r}
+weather_df %>% 
+  mutate(name = fct_reorder(name, tmax)
+  ) %>% 
+  ggplot(aes(x = name, y = tmax)) +
+  geom_boxplot()
+
+```
+
+What about tmax and tmin 。...
+```{r}
+weather_df %>% 
+  pivot_longer(
+    tmax:tmin,
+    names_to = "obs",
+    values_to = "temperature"
+  ) %>% 
+  ggplot(aes(x = temperature, fill = obs)) +
+  geom_density(alpha = .3) +
+  facet_grid(.~name)
+```
+
+```{r}
+pulse_df <- 
+  haven::read_sas("data/public_pulse_data.sas7bdat") %>% 
+  janitor::clean_names() %>% 
+  pivot_longer(
+    bdi_score_bl:bdi_score_12m,
+    names_to = "visit",
+    values_to = "bdi",
+    names_prefix = "bdi_score_"
+  ) %>% 
+  mutate(
+    visit = recode(visit, "bl" = "00m")
+    )
+
+pulse_df %>% 
+  ggplot(aes(x = visit, y = bdi)) +
+  geom_boxplot()
+
+pulse_df %>% 
+  ggplot(aes(x = visit, y = bdi)) +
+  geom_point(size = .2) +
+  geom_line(aes(group = id),alpha = .3)
+```
+
+#10.12 EDA1
+```{r}
+weather_df =  
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728", "USC00519397", "USS0023B17S"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(
+      id, 
+      USW00094728 = "CentralPark_NY", 
+      USC00519397 = "Waikiki_HA",
+      USS0023B17S = "Waterhole_WA"),
+    tmin = tmin / 10,
+    tmax = tmax / 10,
+    #use lubridate the day of month to a month
+    month = lubridate::floor_date(date, unit = "month")) %>%
+  select(name, id, everything())
+```
+
+## `group_by`
+```{r}
+weather_df %>% 
+  group_by(name,month)
+```
+
+## count some thing
+```{r}
+# for the further work
+weather_df %>% 
+  group_by(month) %>% 
+  summarize(n_obs = n())
+
+#jusk a quick way
+weather_df %>% 
+  count(name)
+```
+
+it is nice tah this is a data frame
+```{r}
+#it will produce a table, which can not be used in ggplot2
+weather_df %>% 
+  pull(name) %>% 
+  table()
+```
+
+```{r}
+#create a dataframe
+weather_df %>% 
+  janitor::tabyl(month,name)
+```
+
+## more general summaries
+
+Let's count, take means, look at SDs
+
+```{r}
+weather_df %>% 
+  group_by(name,month) %>% 
+  summarize(
+    n_obs = n(),
+    mean_tmax = mean(tmax, na.rm = TRUE),
+    median_tmax = median(tmax, na.rm = TRUE),
+    sd_tmax = sd(tmax, na.rm = TRUE)
+  ) %>% 
+  #can be used in ggplot
+  ggplot(aes(x = month, y = mean_tmax, color = name))+
+  geom_point()+
+  geom_line()
+```
+
+fomatting table outputs
+```{r}
+weather_df %>% 
+  group_by(name) %>% 
+   summarize(
+    n_obs = n(),
+    mean_tmax = mean(tmax, na.rm = TRUE)
+   ) %>% 
+  #digits for the number
+  knitr::kable(digits = 2)
+```
+
+## grouped `mutate`
+```{r}
+weather_df %>% 
+  # with or without group are different
+  group_by(name) %>% 
+  mutate(
+    mean_tmax = mean(tmax, na.rm = TRUE),
+    center_tmax = tmax - mean_tmax
+  ) %>% 
+  ggplot(aes(x = date, y = center_tmax , color = name))+
+  geom_point()
+
+```
+
+```{r}
+weather_df %>% 
+  group_by(name) %>% 
+  mutate(
+    tmax_rank = min_rank(tmax),
+    #warmest:tmax_rank = min_rank(desc(tmax)
+  ) %>% 
+  filter(tmax_rank < 2)
+```
+
+
+lagged variable
+```{r}
+#lag 滞后函数
+weather_df %>% 
+  group_by(name) %>% 
+  mutate(
+    lagged.tmax = lag(tmax, n = 1),
+    tmax_diff = tmax - lagged.tmax
+  ) %>% 
+  summarize(diff_sd = sd(tmax_diff,na.rm = TRUE))
+```
+
+
+## limitations
+
+what is my "summary" is a linear model ...
+```{r}
+weather_df %>% 
+  group_by(name) %>% 
+  summarize(cor_tmin_max = cor(tmin,tmax,use = "complete"))
+
+weather_df %>% 
+  filter(name == "CentralPark_NY") %>% 
+  lm(tmax ~ tmin,data = .)
+
+```
 
 
 
